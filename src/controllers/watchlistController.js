@@ -49,7 +49,7 @@ export const addToWatchlist = async (req, res) => {
 export const removeFromWatchlist = async (req, res) => {
   // find watchlsit item
   const watchlistItem = await prisma.watchlist.findUnique({
-    where :{id : req.params.movieId}
+    where :{id : req.params.watchlistId}
   })
   if (!watchlistItem){
     return res.status(404).json({error : "Watchlist Item not found"});
@@ -61,7 +61,7 @@ export const removeFromWatchlist = async (req, res) => {
     .json({error : "not allowed to update this whatchlist"});
   }
   await prisma.watchlist.delete({
-    where : {id : req.params.movieId}
+    where : {id : req.params.watchlistId}
   });
 
   res.status(200).json({
@@ -74,7 +74,7 @@ export const updateWatchlistItem = async (req, res) => {
   const { status, rating, notes } = req.body;
   // find watchlsit item
   const watchlistItem = await prisma.watchlist.findUnique({
-    where :{id : req.params.movieId}
+    where :{id : req.params.watchlistId}
   })
   if (!watchlistItem){
     return res.status(404).json({error : "Watchlist Item not found"});
@@ -86,7 +86,7 @@ export const updateWatchlistItem = async (req, res) => {
     .json({error : "not allowed to update this whatchlist"});
   }
   const updatedItem = await prisma.watchlist.update({
-    where : {id : req.params.movieId},
+    where : {id : req.params.watchlistId},
     data : {
       status,
       rating,

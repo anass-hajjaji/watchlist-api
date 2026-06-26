@@ -74,6 +74,7 @@ const login = async (req, res) =>
 }
 const logout = async (req, res) =>
 {
+  console.log(`User ${req.user.id} (${req.user.email}) is logging out`);
   res.cookie("jwt", "", {
     httpOnly: true,
     expires : new Date(0)

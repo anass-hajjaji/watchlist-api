@@ -9,7 +9,7 @@ const router = express.Router()
 router.use(authMiddleware);
 
 router.post("/", validateRequest(addToWatchlistItemSchema), addToWatchlist);
-router.delete("/:movieId", removeFromWatchlist);
-router.put("/:movieId", validateRequest(updateWatchlistItemSchema), updateWatchlistItem);
+router.delete("/:watchlistId", removeFromWatchlist);
+router.put("/:watchlistId", validateRequest(updateWatchlistItemSchema), updateWatchlistItem);
 
 export default router;
