@@ -1,45 +1,61 @@
 
 import { prisma } from "../config/db.js";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { generateToken } from "../utils/generateToken.js";
  
 const register = async (req, res) => {
-
-  const {name, email, password} = req.body;
-  
-  const userExist = await prisma.user.findUnique(
-  {
-      where:{email : email}
-  });
-  if (userExist)
-  {
-    return res.status(400)
-    .json({error: "User already exist with this email."})
-  }
-  // hash the password
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-
-  // creat user
-  const user = await prisma.user.create({
-    data:{
-      name,
-      email,
-      password: hashedPassword
+  const {username, email, password} = req.body;
+  try {
+    const userExist = await prisma.user.findUnique(
+    {
+        where:{email : email}
+    });
+    if (userExist)
+    {
+      return res.status(400)
+      .json({error: "User already exist with this email."})
     }
-  });
-  // Generate JWT 
-  const token = generateToken(user.id, res);
+    const usernameTaken = await prisma.user.findUnique(
+    {
+        where:{username : username}
+    });
+    if (usernameTaken)
+    {
+      return res.status(400)
+      .json({error: "User already exist with this username."})
+    }
+    // hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-  res.status(201).json({
-    status: "success",
-    user : {
-      id: user.id, 
-      name : name, 
-      email : email
-    },
-    token
-  });
+    // creat user
+    const user = await prisma.user.create({
+      data:{
+        username,
+        email,
+        password: hashedPassword
+      }
+    });
+    // Generate JWT 
+    const token = generateToken(user.id, res);
+
+    res.status(201).json({
+      status: "success",
+      user : {
+        id: user.id, 
+        username: user.username,
+        email : email
+      },
+      token
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return res.status(409).json({ error: "Email or username already exists." });
+    }
+    console.error("Register error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 }
 
 const login = async (req, res) => 
