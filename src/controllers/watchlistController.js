@@ -58,7 +58,7 @@ export const removeFromWatchlist = async (req, res) => {
   if (watchlistItem.userId !== req.user.id)
   {
     return res.status(403)
-    .json({error : "not allowed to update this whatchlist"});
+    .json({error : "not allowed to delete this whatchlist"});
   }
   await prisma.watchlist.delete({
     where : {id : req.params.watchlistId}
