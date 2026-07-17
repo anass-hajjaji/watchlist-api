@@ -1,22 +1,69 @@
 import { prisma } from "../config/db.js";
 
+// export const getAllMovies = async (req, res) => {
+//   try{
+//     const movies = await prisma.movie.findMany({
+//       include : {
+//         creator : {
+//           select:{ id : true, username : true}
+//         },
+//         _count: {
+//           select : {
+//             watchlistItems : true
+//           }
+//         }
+//       }
+//     })
+//     res.status(200).json({status : "success", movies});    
+//   } catch (err) {
+//     res.status(500).json({ err: err.message })
+//   }
+// }
+
 export const getAllMovies = async (req, res) => {
-  try{
-    const movies = await prisma.movie.findMany({
-      include : {
-        creator : {
-          select:{ id : true, username : true}
-        },
-        _count: {
-          select : {
-            watchlistItems : true
+  try {
+    const { q, genre, year, sort, page = 1, limit = 10 } = req.query
+    // build filter object
+    const where = {}
+    if (q) where.title = { contains: q, mode: 'insensitive' }
+    if (genre) where.genres = { has: genre }
+    if (year) where.releaseYear = parseInt(year)
+    // build sort object
+    const orderBy = {}
+    if (sort === 'runtime') orderBy.runtime = 'asc'
+    else if (sort === 'year') orderBy.releaseYear = 'desc'
+    else if (sort === 'title') orderBy.title = 'asc'
+    else orderBy.createdAt = 'desc'
+    // pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const take = parseInt(limit)
+    const [movies, total] = await Promise.all([
+      prisma.movie.findMany({
+        where,
+        orderBy,
+        skip,
+        take,
+        include: {
+          creator: {
+            select: { id: true, username: true }
+          },
+          _count: {
+            select: { watchlistItems: true }
           }
         }
-      }
+      }),
+      prisma.movie.count({ where })
+    ])
+
+    res.status(200).json({
+      status: 'success',
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / take),
+      movies
     })
-    res.status(200).json({status : "success", movies});    
   } catch (err) {
-    res.status(500).json({ err: err.message })
+    res.status(500).json({ error: err.message })
   }
 }
 

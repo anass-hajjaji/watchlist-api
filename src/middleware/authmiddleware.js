@@ -33,3 +33,11 @@ export const authMiddleware = async (req, res, next) => {
     return res.status(401).json({error : "not authorized, token failed"}); 
   }
 }
+
+// middleware/validateUser.js
+export const validateUser = (req, res, next) => {
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ err: "Authentication required or invalid user" });
+  }
+  next();
+};
