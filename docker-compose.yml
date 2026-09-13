@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    restart: always
+    # This reads the PORT from your .env file. 
+    # If PORT is missing, it safely falls back to 3000.
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    env_file:
+      - .env

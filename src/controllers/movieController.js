@@ -23,8 +23,8 @@ import { prisma } from "../config/db.js";
 export const getAllMovies = async (req, res) => {
   try {
     const { q, genre, year, sort, page = 1, limit = 10 } = req.query
-    // build filter object
-    const where = {}
+    
+    const where = {} // build filter object
     if (q) where.title = { contains: q, mode: 'insensitive' }
     if (genre) where.genres = { has: genre }
     if (year) where.releaseYear = parseInt(year)
@@ -34,7 +34,7 @@ export const getAllMovies = async (req, res) => {
     else if (sort === 'year') orderBy.releaseYear = 'desc'
     else if (sort === 'title') orderBy.title = 'asc'
     else orderBy.createdAt = 'desc'
-    // pagination
+    
     const skip = (parseInt(page) - 1) * parseInt(limit)
     const take = parseInt(limit)
     const [movies, total] = await Promise.all([

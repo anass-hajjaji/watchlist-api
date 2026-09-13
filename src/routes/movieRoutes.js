@@ -4,6 +4,7 @@ import { getAllMovies, getMovieById ,
 import {authMiddleware, validateUser } from '../middleware/authmiddleware.js'
 import {createMovieSchema, updateMovieSchema} from '../validator/movieValidator.js'
 import {validateRequest} from '../middleware/validateRequest.js'
+
 const router = express.Router()
 
 router.get("/", getAllMovies);
