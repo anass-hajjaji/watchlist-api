@@ -5,6 +5,8 @@ import { connectDB, disconnectDb } from './config/db.js';
 import moviesRoutes from './routes/movieRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import watchlistRoutes from './routes/watchlistRoutes.js';
+import { globalErrorHandler } from './middleware/errorHandler.js';
+import AppError from './utils/appError.js';
 
 
 const app = express();
@@ -18,6 +20,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/movies', moviesRoutes);
 app.use('/auth', authRoutes); 
 app.use('/watchlist', watchlistRoutes); 
+
+// Catch-all for undefined routes
+app.all('*', (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
+
+app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 3000;
 

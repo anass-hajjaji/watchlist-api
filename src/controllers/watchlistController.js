@@ -1,64 +1,59 @@
 import { prisma } from "../config/db.js";
+import { catchAsync } from "../utils/catchAsync.js";
+import { AppError } from "../utils/appError.js";
 
-export const addToWatchlist = async (req, res) => {
-  try {
-   
-    const {movieId, status, rating, notes } = req.body;
-    // verify movie exists
-    const movie = await prisma.movie.findUnique(
-    {
-      where:{ id : movieId},
-    });
-    if (!movie)
-    {
-      return res.status(404).json({error : "Movie not found"})
-    }
-    // check if already exist
-    const alreadyExist = await prisma.watchlist.findUnique(
-    {
-      where : { userId_movieId:{
-         userId :req.user.id ,
-         movieId : movieId,
-      }},
-    });
-    if (alreadyExist)
-    {
-      return res.status(400).json({error : "Movie already in the Watchlist."})
-    }
-    const watchlistItem = await prisma.watchlist.create({
-      data : {
-        userId : req.user.id ,
-        movieId : movieId,
-        status : status || "TO_WATCH",
-        rating, 
-        notes,
-      }
-    });
-    return res.status(201).json({
-      status : "success",
-      data : {
-        watchlistItem
-      },
-    })
-  } catch (error) {
-    console.error('Error adding to watchlist:', error);
-    return res.status(500).json({error : "Internal server error"})
+export const addToWatchlist = catchAsync(async (req, res, next) => {
+  const {movieId, status, rating, notes } = req.body;
+  // verify movie exists
+  const movie = await prisma.movie.findUnique(
+  {
+    where:{ id : movieId},
+  });
+  if (!movie)
+  {
+    return next(AppError(404, "Movie not found"));
   }
-}
+  // check if already exist
+  const alreadyExist = await prisma.watchlist.findUnique(
+  {
+    where : { userId_movieId:{
+       userId :req.user.id ,
+       movieId : movieId,
+    }},
+  });
+  if (alreadyExist)
+  {
+    return next(AppError(400, "Movie already in the Watchlist."));
+  }
+  const watchlistItem = await prisma.watchlist.create({
+    data : {
+      userId : req.user.id ,
+      movieId : movieId,
+      status : status || "TO_WATCH",
+      rating,
+      notes,
+    }
+  });
+  return res.status(201).json({
+    status : "success",
+    data : {
+      watchlistItem
+    },
+  })
+});
 
-export const removeFromWatchlist = async (req, res) => {
+export const removeFromWatchlist = catchAsync(async (req, res, next) => {
   // find watchlsit item
   const watchlistItem = await prisma.watchlist.findUnique({
     where :{id : req.params.watchlistId}
   })
   if (!watchlistItem){
-    return res.status(404).json({error : "Watchlist Item not found"});
+    return next(AppError(404, "Watchlist Item not found"));
   }
   // check ownership
   if (watchlistItem.userId !== req.user.id)
   {
-    return res.status(403)
-    .json({error : "not allowed to delete this whatchlist"});
+    return next(AppError(403, "not allowed to delete this whatchlist"));
   }
   await prisma.watchlist.delete({
     where : {id : req.params.watchlistId}
@@ -68,22 +63,20 @@ export const removeFromWatchlist = async (req, res) => {
     status : "success",
     message : "the item removed from the watchlist"
   }); 
-}
-
-export const updateWatchlistItem = async (req, res) => {
+});
+export const updateWatchlistItem = catchAsync(async (req, res, next) => {
   const { status, rating, notes } = req.body;
   // find watchlsit item
   const watchlistItem = await prisma.watchlist.findUnique({
     where :{id : req.params.watchlistId}
   })
   if (!watchlistItem){
-    return res.status(404).json({error : "Watchlist Item not found"});
+    return next(AppError(404, "Watchlist Item not found"));
   }
   // check ownership
   if (watchlistItem.userId !== req.user.id)
   {
-    return res.status(403)
-    .json({error : "not allowed to update this whatchlist"});
+    return next(AppError(403, "not allowed to update this whatchlist"));
   }
   const updatedItem = await prisma.watchlist.update({
     where : {id : req.params.watchlistId},
@@ -100,4 +93,4 @@ export const updateWatchlistItem = async (req, res) => {
       watchlistItem : updatedItem
     }
   }); 
-}
+});
