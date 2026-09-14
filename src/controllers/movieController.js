@@ -1,6 +1,6 @@
 import { prisma } from "../config/db.js";
 import { catchAsync } from "../utils/catchAsync.js";
-import { AppError } from "../utils/appError.js";
+import AppError  from "../utils/appError.js";
 
 // export const getAllMovies = async (req, res) => {
 //   try{
@@ -80,7 +80,7 @@ export const getMovieById = catchAsync(async (req, res, next) => {
       }
     })
     if (!movie) {
-     return next(AppError(404, "the movie is not found"));
+     return next(new AppError(404, "the movie is not found"));
     }
     res.status(200).json({status: "success", movie});
 })
@@ -91,7 +91,7 @@ export const createMovie = catchAsync(async (req, res, next) => {
       where: { title, releaseYear }
     })
     if (movie) {
-      return next(AppError(409, "movie already exists"));
+      return next(new AppError(409, "movie already exists"));
     }
     const newMovie = await prisma.movie.create({
       data: {
@@ -113,11 +113,11 @@ export const updateMovie = catchAsync(async (req, res, next) => {
     where :{id : req.params.movieId}
   })
   if (!movie) {
-    return next(AppError(404, "the movie is not found"));
+    return next(new AppError(404, "the movie is not found"));
   }
   const { title, overview, releaseYear, genres, runtime, posterUrl } = req.body;
   if ( movie.createdBy !== req.user.id) {
-    return next(AppError(403, "you are not authorized to update this movie"));
+    return next(new AppError(403, "you are not authorized to update this movie"));
   }
   const updatedMovie = await prisma.movie.update({
     where : {id : req.params.movieId},
@@ -138,10 +138,10 @@ export const deleteMovie = catchAsync(async (req, res, next) =>{
       where :{id : req.params.movieId}
     })
     if (!movie) {
-      return next(AppError(404, "the movie is not found"));
+      return next(new AppError(404, "the movie is not found"));
     }
     if ( movie.createdBy !== req.user.id) {
-      return next(AppError(403, "you are not authorized to delete this movie"));
+      return next(new AppError(403, "you are not authorized to delete this movie"));
     }
       await prisma.movie.delete({
         where : {id : req.params.movieId}

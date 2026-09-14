@@ -22,7 +22,8 @@ app.use('/auth', authRoutes);
 app.use('/watchlist', watchlistRoutes); 
 
 // Catch-all for undefined routes
-app.all('*', (req, res, next) => {
+// A cleaner catch-all for 404s
+app.use((req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
@@ -60,10 +61,20 @@ process.on('uncaughtException', async (err) => {
   process.exit(1);
 });
 
+// For Ctrl+C in terminal
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully...');
   server.close(async () => {  
-  await disconnectDb();
-  process.exit(0);
+    await disconnectDb();
+    process.exit(0);
+  });
+});
+
+// For Docker container shutdowns (docker compose down)
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  server.close(async () => {  
+    await disconnectDb();
+    process.exit(0);
   });
 });
