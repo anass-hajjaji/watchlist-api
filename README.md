@@ -1,52 +1,64 @@
 # Watchlist API
 
-A production-ready REST API for managing movies and personal watchlists, built with Node.js, Express, PostgreSQL, and Prisma. Includes JWT authentication, ownership-based access control, request validation, and a movie seed script.
+A production-ready REST API for managing movies and personal watchlists, built with an enterprise-grade architecture using Node.js, Express, serverless PostgreSQL (Neon), and a dedicated Redis caching layer. Fully containerized with Docker for seamless development and deployment.
 
 ## Features
 
-- **Authentication**: Register, login, and logout with JWT stored in secure httpOnly cookies
-- **Watchlist Management**: Add, update, and delete watchlist entries with full ownership checks
-- **Movie Endpoints**: List and retrieve movies with creator info and watchlist counts
-- **Request Validation**: Zod schemas enforce request body shapes and UUID parameter formats
-- **Security**: bcrypt password hashing, httpOnly + SameSite cookies, duplicate entry prevention
-- **Database**: Prisma ORM with PostgreSQL — schema, migrations, and seed data included
+- **Enterprise Caching**: Redis-backed cache middleware with automated cache invalidation (sweepers) for lightning-fast `GET` requests.
+- **Advanced Security**: Redis-backed rate limiting (Global limits and strict Auth limits), bcrypt password hashing, and duplicate entry prevention.
+- **Authentication**: Register, login, and logout with JWT stored in secure `httpOnly` + `SameSite=Strict` cookies.
+- **Global Error Handling**: Centralized error interception for asynchronous routes, Prisma exceptions (e.g., P2002), and JWT validations.
+- **Watchlist Management**: Add, update, and delete watchlist entries with full ownership-based access control.
+- **Movie Endpoints**: List and retrieve movies with creator info, watchlist counts, and optimized parallel database querying.
+- **Request Validation**: Zod schemas enforce request body shapes and UUID parameter formats.
+- **Containerized Environment**: One-command local development setup utilizing Docker and Docker Compose with persistent named volumes.
 
 ## Tech Stack
 
-- **Runtime**: Node.js
+- **Runtime**: Node.js (v20+)
 - **Framework**: Express.js
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL (Neon)
+- **Cache / Rate Limiting**: Redis
 - **ORM**: Prisma
+- **Infrastructure**: Docker & Docker Compose
 - **Auth**: JWT + bcryptjs
 - **Validation**: Zod
 
 ## Project Structure
 
-```
+```text
 watchlist-api/
 ├── prisma/
-│   ├── schema.prisma        # Data models (User, Movie, Watchlist)
-│   ├── migrations/          # SQL migration history
-│   └── seed.js              # Movie seed script
+│   ├── schema.prisma          # Data models (User, Movie, Watchlist)
+│   ├── migrations/            # SQL migration history
+│   └── seed.js                # Movie seed script
 ├── src/
 │   ├── config/
-│   │   └── db.js            # Prisma client + connect/disconnect helpers
+│   │   ├── db.js              # Prisma client + connect/disconnect helpers
+│   │   └── redis.js           # Redis client & connection logic
 │   ├── controllers/
-│   │   ├── authController.js       # Register / login / logout
-│   │   ├── movieController.js      # Movie list and detail logic
-│   │   └── watchlistController.js  # Watchlist CRUD logic
+│   │   ├── authController.js      
+│   │   ├── movieController.js     
+│   │   └── watchlistController.js 
 │   ├── middleware/
-│   │   ├── authMiddleware.js       # JWT auth guard
-│   │   └── validateRequest.js      # Zod validation middleware
+│   │   ├── authMiddleware.js      # JWT auth guard
+│   │   ├── cacheMiddleware.js     # Redis cache interceptor
+│   │   ├── rateLimiter.js         # Redis-backed global & auth limiters
+│   │   ├── validateRequest.js     # Zod validation middleware
+│   │   └── errorHandler.js        # Global error interceptor
 │   ├── routes/
-│   │   ├── authRoutes.js           # Auth endpoints
-│   │   ├── movieRoutes.js          # Movie endpoints
-│   │   └── watchlistRoutes.js      # Protected watchlist endpoints
+│   │   ├── authRoutes.js          # Auth endpoints
+│   │   ├── movieRoutes.js         # Movie endpoints
+│   │   └── watchlistRoutes.js     # Protected watchlist endpoints
 │   ├── utils/
-│   │   └── generateToken.js        # JWT creation + cookie config
+│   │   ├── cache.js               # Cache sweeper / invalidation logic
+│   │   ├── catchAsync.js          # Async wrapper for controllers
+│   │   ├── appError.js            # Custom operational error class
+│   │   └── generateToken.js       # JWT creation + cookie config
 │   ├── validators/
-│   │   └── watchlistValidator.js   # Zod schemas
-│   └── server.js                   # App entrypoint
+│   │   └── watchlistValidator.js  # Zod schemas
+│   └── server.js                  # App entrypoint & boot sequence
+├── docker-compose.yml             # Container orchestration
 ├── .env.example
 └── package.json
 ```
@@ -55,49 +67,42 @@ watchlist-api/
 
 ### Prerequisites
 
-- Node.js 18+
-- PostgreSQL running locally or via a cloud provider (e.g. Neon)
-- pnpm / npm / yarn
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- A [Neon](https://neon.tech/) PostgreSQL database URL (or local Postgres)
 
 ### Setup
 
 1. **Clone the repository**
-
 ```bash
 git clone https://github.com/anass-hajjaji/watchlist-api
 cd watchlist-api
 ```
 
-2. **Install dependencies**
-
-```bash
-npm install
-```
-
-3. **Configure environment variables**
-
+2. **Configure environment variables**
 ```bash
 cp .env.example .env
 ```
+*Fill in your `.env` values, specifically your `DATABASE_URL`.*
 
-Then fill in your values (see [Environment Variables](#environment-variables)).
-
-4. **Run database migrations**
-
+3. **Spin up the Docker environment**
 ```bash
-npx prisma migrate dev
+docker compose up -d
 ```
 
-5. **Seed the database**
-
+4. **Install dependencies inside the container**
+*(Required to sync packages past the Docker anonymous volume shield)*
 ```bash
-node prisma/seed.js
+docker compose exec api npm install
 ```
 
-6. **Start the server**
-
+5. **Run database migrations**
 ```bash
-npm run dev
+docker compose exec api npx prisma migrate dev
+```
+
+6. **Seed the database**
+```bash
+docker compose exec api node prisma/seed.js
 ```
 
 API will be available at `http://localhost:3000`
@@ -105,22 +110,22 @@ API will be available at `http://localhost:3000`
 ## API Reference
 
 ### Authentication
-
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | POST | `/auth/register` | Create a new account | No |
-| POST | `/auth/login` | Login and receive JWT | No |
+| POST | `/auth/login` | Login and receive JWT | No *(Strict Rate Limit: 5/hr)* |
 | POST | `/auth/logout` | Clear JWT cookie | No |
 
 ### Movies
-
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| GET | `/movies` | List all movies with creator info and watchlist counts | No |
-| GET | `/movies/:movieId` | Get a single movie by ID | No |
+| GET | `/movies` | List all movies with creator info | No *(Redis Cached)* |
+| GET | `/movies/:movieId` | Get a single movie by ID | No *(Redis Cached)* |
+| POST | `/movies` | Add a new movie | Yes *(Sweeps Cache)* |
+| PUT | `/movies/:movieId` | Update a movie | Yes *(Sweeps Cache)* |
+| DELETE | `/movies/:movieId` | Delete a movie | Yes *(Sweeps Cache)* |
 
 ### Watchlist
-
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | POST | `/watchlist` | Add a movie to your watchlist | Yes |
@@ -130,25 +135,34 @@ API will be available at `http://localhost:3000`
 ## How It Works
 
 ### Authentication Flow
+- **Register**: Checks for duplicate email → hashes password with bcrypt → creates user → returns JWT.
+- **Login**: Validates credentials → returns JWT in response body and an `httpOnly` cookie. Protected by a strict `loginLimiter` (5 attempts per hour).
+- **Logout**: Clears the JWT cookie.
+- **JWT**: Signed with `JWT_SECRET`, returned in both the response and a `Secure`, `HttpOnly`, `SameSite=Strict` cookie.
 
-- **Register**: Checks for duplicate email → hashes password with bcrypt → creates user → returns JWT
-- **Login**: Validates credentials → returns JWT in response body and httpOnly cookie
-- **Logout**: Clears the JWT cookie
-- **JWT**: Signed with `JWT_SECRET`, returned in both the response and a `Secure`, `HttpOnly`, `SameSite=Strict` cookie
+### Caching Strategy (Redis)
+- **Intercept**: Read-heavy requests (e.g., `GET /movies`) are intercepted by `cacheMiddleware`. It uses `req.originalUrl` (e.g., `/movies?genre=action&page=2`) as a unique Redis key to instantly serve stringified JSON data, bypassing PostgreSQL entirely for 1 hour.
+- **Invalidation**: When a database mutation occurs (`POST`, `PUT`, `DELETE`), the `clearHashCache` utility acts as a sweeper. It finds and deletes all related Redis keys using wildcard patterns (e.g., `/movies*`) to ensure the next request pulls fresh data.
+
+### Security & Rate Limiting
+- **Global Limiter**: Restricts general traffic to 100 requests per 15-minute window per IP.
+- **Redis Store**: Limiters are powered by `rate-limit-redis`, storing IP tallies directly in the Redis container for instantaneous, low-memory tracking.
+
+### Global Error Handling
+- **catchAsync**: All controllers are wrapped in a `catchAsync` utility to eliminate repetitive `try/catch` blocks.
+- **Centralized Interceptor**: The `errorHandler.js` middleware catches operational errors, Prisma-specific codes (e.g., `P2002` Unique Constraint violations), and JWT errors (e.g., Expired Tokens), formatting them into clean, predictable JSON responses.
 
 ### Movie Endpoints
-
-- `GET /movies` returns all movies including the `creator` (id + username) and `_count.watchlistItems`
-- `GET /movies/:movieId` validates the `movieId` format before querying — returns `400` for missing or malformed UUIDs, `404` if the movie doesn't exist
+- `GET /movies` returns all movies including the `creator` (id + username) and `_count.watchlistItems`.
+- **Optimization**: The controller uses `Promise.all` to fetch paginated movie data and total counts from Prisma simultaneously, cutting query time in half.
+- `GET /movies/:movieId` validates the `movieId` format before querying — returns `400` for missing or malformed UUIDs, `404` if the movie doesn't exist.
 
 ### Watchlist Logic
-
-- **Add**: Validates request body → checks movie exists → prevents duplicate `userId + movieId` entries
-- **Update / Delete**: Validates ownership of the watchlist item before applying changes or deleting
+- **Add**: Validates request body → checks movie exists → prevents duplicate `userId + movieId` entries.
+- **Update / Delete**: Validates ownership of the watchlist item before applying changes or deleting.
 
 ### Request Validation
-
-All request bodies are validated with Zod schemas via the `validateRequest` middleware. Critical route parameters (e.g. `movieId`) are validated for presence and UUID format before hitting the database — avoiding unnecessary queries and returning clearer error messages.
+All request bodies are validated with Zod schemas via the `validateRequest` middleware. Critical route parameters are validated for presence and UUID format before hitting the database — avoiding unnecessary queries and returning clearer error messages.
 
 ## Database Schema
 
@@ -188,8 +202,9 @@ All request bodies are validated with Zod schemas via the `validateRequest` midd
 ## Environment Variables
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/watchlist
+DATABASE_URL=postgresql://user:password@aws-region.neon.tech/watchlist
+REDIS_URL=redis://redis:6379      # Uses the Docker service name
 JWT_SECRET=your_super_secret_key
-JWT_EXPIRE_DATE=7d        # optional, defaults to 7d
-PORT=3000                 # optional, defaults to 3000
+JWT_EXPIRE_DATE=7d                # optional, defaults to 7d
+PORT=3000                         # optional, defaults to 3000
 ```
