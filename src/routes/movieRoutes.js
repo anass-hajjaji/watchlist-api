@@ -4,10 +4,11 @@ import { getAllMovies, getMovieById ,
 import {authMiddleware } from '../middleware/authmiddleware.js'
 import {createMovieSchema, updateMovieSchema} from '../validator/movieValidator.js'
 import {validateRequest} from '../middleware/validateRequest.js'
+import {checkCache} from '../middleware/cacheMiddleware.js'
 
 const router = express.Router()
 
-router.get("/", getAllMovies);
+router.get("/", checkCache ,getAllMovies);
 router.get("/:movieId", getMovieById);
 router.post("/", authMiddleware, validateRequest(createMovieSchema) ,createMovie);
 router.patch("/:movieId",authMiddleware, validateRequest(updateMovieSchema), updateMovie);

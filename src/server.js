@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import watchlistRoutes from './routes/watchlistRoutes.js';
 import { globalErrorHandler } from './middleware/errorHandler.js';
 import AppError from './utils/appError.js';
+import {connectRedis} from './config/redis.js'
 
 
 const app = express();
@@ -35,6 +36,7 @@ let server;
 const start = async () => {
   try {
     await connectDB();
+    await connectRedis();
     server = app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });

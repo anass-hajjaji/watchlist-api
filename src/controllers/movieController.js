@@ -1,7 +1,7 @@
 import { prisma } from "../config/db.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import AppError  from "../utils/appError.js";
-
+import redisClient from "../config/redis.js";
 
 export const getAllMovies = catchAsync(async (req, res, next) => {
   const { q, genre, year, sort, page = 1, limit = 10 } = req.query
@@ -37,13 +37,20 @@ export const getAllMovies = catchAsync(async (req, res, next) => {
     prisma.movie.count({ where })
   ])
 
-  res.status(200).json({
+  const responsePayload = {
     status: 'success',
     total,
     page: parseInt(page),
     totalPages: Math.ceil(total / take),
     movies
-  })
+  };
+
+  // Save a stringified copy of that package to Redis
+  const cacheKey = req.originalUrl;
+  await redisClient.setEx(cacheKey, 3600, JSON.stringify(responsePayload));
+
+  //Send the package to the user
+  res.status(200).json(responsePayload);
 })
 
 export const getMovieById = catchAsync(async (req, res, next) => {
