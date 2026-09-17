@@ -63,6 +63,7 @@ const login = catchAsync(async (req, res, next) =>
 
   res.status(200).json({
     status: "success",
+    message: "Login successful",
     user : {
       id: user.id, 
       email : email

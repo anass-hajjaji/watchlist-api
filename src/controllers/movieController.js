@@ -2,25 +2,6 @@ import { prisma } from "../config/db.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import AppError  from "../utils/appError.js";
 
-// export const getAllMovies = async (req, res) => {
-//   try{
-//     const movies = await prisma.movie.findMany({
-//       include : {
-//         creator : {
-//           select:{ id : true, username : true}
-//         },
-//         _count: {
-//           select : {
-//             watchlistItems : true
-//           }
-//         }
-//       }
-//     })
-//     res.status(200).json({status : "success", movies});    
-//   } catch (err) {
-//     res.status(500).json({ err: err.message })
-//   }
-// }
 
 export const getAllMovies = catchAsync(async (req, res, next) => {
   const { q, genre, year, sort, page = 1, limit = 10 } = req.query
@@ -80,7 +61,7 @@ export const getMovieById = catchAsync(async (req, res, next) => {
       }
     })
     if (!movie) {
-     return next(new AppError(404, "the movie is not found"));
+     return next(new AppError("the movie is not found", 404));
     }
     res.status(200).json({status: "success", movie});
 })
@@ -91,7 +72,7 @@ export const createMovie = catchAsync(async (req, res, next) => {
       where: { title, releaseYear }
     })
     if (movie) {
-      return next(new AppError(409, "movie already exists"));
+      return next(new AppError("movie already exists", 409));
     }
     const newMovie = await prisma.movie.create({
       data: {
@@ -113,22 +94,24 @@ export const updateMovie = catchAsync(async (req, res, next) => {
     where :{id : req.params.movieId}
   })
   if (!movie) {
-    return next(new AppError(404, "the movie is not found"));
+    return next(new AppError("the movie is not found", 404));
   }
   const { title, overview, releaseYear, genres, runtime, posterUrl } = req.body;
   if ( movie.createdBy !== req.user.id) {
-    return next(new AppError(403, "you are not authorized to update this movie"));
+    return next(new AppError("you are not authorized to update this movie", 403));
   }
+  
+  const updatedData = {};
+  if (title !== undefined) updatedData.title = title;
+  if (overview !== undefined) updatedData.overview = overview;
+  if (releaseYear !== undefined) updatedData.releaseYear = releaseYear;
+  if (genres !== undefined) updatedData.genres = genres;
+  if (runtime !== undefined) updatedData.runtime = runtime;
+  if (posterUrl !== undefined) updatedData.posterUrl = posterUrl;
+
   const updatedMovie = await prisma.movie.update({
     where : {id : req.params.movieId},
-      data: {
-        ...(title !== undefined && { title }),
-        ...(overview !== undefined && { overview }),
-        ...(releaseYear !== undefined && { releaseYear }),
-        ...(genres !== undefined && { genres }),
-        ...(runtime !== undefined && { runtime }),
-        ...(posterUrl !== undefined && { posterUrl }),
-      }
+      data: updatedData,
   })
   res.status(200).json({status : "success", movie : updatedMovie});
 })
@@ -138,10 +121,10 @@ export const deleteMovie = catchAsync(async (req, res, next) =>{
       where :{id : req.params.movieId}
     })
     if (!movie) {
-      return next(new AppError(404, "the movie is not found"));
+      return next(new AppError("the movie is not found", 404));
     }
     if ( movie.createdBy !== req.user.id) {
-      return next(new AppError(403, "you are not authorized to delete this movie"));
+      return next(new AppError("you are not authorized to delete this movie", 403));
     }
       await prisma.movie.delete({
         where : {id : req.params.movieId}
@@ -151,3 +134,24 @@ export const deleteMovie = catchAsync(async (req, res, next) =>{
       message : `the movie : ${movie.title} is deleted succefully`
     })
 })
+
+// the basic get all movies function without filters, sorting, and pagination
+// export const getAllMovies = async (req, res) => {
+//   try{
+//     const movies = await prisma.movie.findMany({
+//       include : {
+//         creator : {
+//           select:{ id : true, username : true}
+//         },
+//         _count: {
+//           select : {
+//             watchlistItems : true
+//           }
+//         }
+//       }
+//     })
+//     res.status(200).json({status : "success", movies});    
+//   } catch (err) {
+//     res.status(500).json({ err: err.message })
+//   }
+// }

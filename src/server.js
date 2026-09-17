@@ -21,7 +21,6 @@ app.use('/movies', moviesRoutes);
 app.use('/auth', authRoutes); 
 app.use('/watchlist', watchlistRoutes); 
 
-// Catch-all for undefined routes
 // A cleaner catch-all for 404s
 app.use((req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

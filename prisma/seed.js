@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-const creatorId = "7ed2eed0-15d5-4013-85ae-73ab7fa2f1a5";
+const creatorId = "add24e7d-0ad5-4c7e-89b2-d646108e3199";
 
 // A base collection of real movies
 const realMoviesBase = [
