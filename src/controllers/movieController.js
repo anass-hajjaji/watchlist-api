@@ -2,6 +2,7 @@ import { prisma } from "../config/db.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import AppError  from "../utils/appError.js";
 import redisClient from "../config/redis.js";
+import {clearHashCache} from '../utils/chache.js'
 
 export const getAllMovies = catchAsync(async (req, res, next) => {
   const { q, genre, year, sort, page = 1, limit = 10 } = req.query
@@ -92,6 +93,9 @@ export const createMovie = catchAsync(async (req, res, next) => {
         createdBy : req.user.id
       },
     });
+    // 🧹 SWEEP THE CACHE!
+    await clearHashCache('/movies');
+
     res.status(201).json({status: "success", movie: newMovie});
 })
 
@@ -120,6 +124,8 @@ export const updateMovie = catchAsync(async (req, res, next) => {
     where : {id : req.params.movieId},
       data: updatedData,
   })
+  // 🧹 SWEEP THE CACHE!
+  await clearHashCache('/movies');
   res.status(200).json({status : "success", movie : updatedMovie});
 })
 
@@ -136,6 +142,8 @@ export const deleteMovie = catchAsync(async (req, res, next) =>{
       await prisma.movie.delete({
         where : {id : req.params.movieId}
       })
+    // 🧹 SWEEP THE CACHE!
+    await clearHashCache('/movies');
     res.status(200).json({
       status : "success",
       message : `the movie : ${movie.title} is deleted succefully`

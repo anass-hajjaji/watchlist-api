@@ -8,6 +8,8 @@ import watchlistRoutes from './routes/watchlistRoutes.js';
 import { globalErrorHandler } from './middleware/errorHandler.js';
 import AppError from './utils/appError.js';
 import {connectRedis} from './config/redis.js'
+import { apiLimiter } from './middleware/rateLimiter.js';
+import { initRateLimiter } from './middleware/rateLimiter.js';
 
 
 const app = express();
@@ -17,6 +19,7 @@ app.use(express.json());
 // for parsing application/x-www-form-urlencoded
 app.use(express.urlencoded({ extended: true }));
 
+app.use(apiLimiter); // Apply rate limiting to all routes
 
 app.use('/movies', moviesRoutes);
 app.use('/auth', authRoutes); 
@@ -37,6 +40,7 @@ const start = async () => {
   try {
     await connectDB();
     await connectRedis();
+    initRateLimiter(); // Initialize the rate limiter after Redis is connected
     server = app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
