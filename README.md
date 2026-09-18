@@ -150,7 +150,7 @@ API will be available at `http://localhost:3000`
 
 ### Global Error Handling
 - **catchAsync**: All controllers are wrapped in a `catchAsync` utility to eliminate repetitive `try/catch` blocks.
-- **Centralized Interceptor**: The `errorHandler.js` middleware catches operational errors, Prisma-specific codes (e.g., `P2002` Unique Constraint violations), and JWT errors (e.g., Expired Tokens), formatting them into clean, predictable JSON responses.
+- **Centralized Interceptor**: The `errorHandler.js` middleware catches operational errors, and JWT errors (e.g., Expired Tokens), formatting them into clean, predictable JSON responses.
 
 ### Movie Endpoints
 - `GET /movies` returns all movies including the `creator` (id + username) and `_count.watchlistItems`.
