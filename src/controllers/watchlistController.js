@@ -1,6 +1,7 @@
 import { prisma } from "../config/db.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import AppError from "../utils/appError.js";
+import {clearHashCache} from '../utils/chache.js'
 
 export const addToWatchlist = catchAsync(async (req, res, next) => {
   const {movieId, status, rating, notes } = req.body;
@@ -11,7 +12,7 @@ export const addToWatchlist = catchAsync(async (req, res, next) => {
   });
   if (!movie)
   {
-    return next(new AppError(404, "Movie not found"));
+    return next(new AppError("Movie not found", 404));
   }
   // check if already exist
   const alreadyExist = await prisma.watchlist.findUnique(
@@ -23,7 +24,7 @@ export const addToWatchlist = catchAsync(async (req, res, next) => {
   });
   if (alreadyExist)
   {
-    return next(new AppError(400, "Movie already in the Watchlist."));
+    return next(new AppError("Movie already in the Watchlist.", 400));
   }
   const watchlistItem = await prisma.watchlist.create({
     data : {
@@ -34,6 +35,9 @@ export const addToWatchlist = catchAsync(async (req, res, next) => {
       notes,
     }
   });
+
+  await clearHashCache("/movies");
+
   return res.status(201).json({
     status : "success",
     data : {
@@ -48,16 +52,18 @@ export const removeFromWatchlist = catchAsync(async (req, res, next) => {
     where :{id : req.params.watchlistId}
   })
   if (!watchlistItem){
-    return next(new AppError(404, "Watchlist Item not found"));
+    return next(new AppError("Watchlist Item not found", 404));
   }
   // check ownership
   if (watchlistItem.userId !== req.user.id)
   {
-    return next(new AppError(403, "not allowed to delete this whatchlist"));
+    return next(new AppError("not allowed to delete this whatchlist", 403));
   }
   await prisma.watchlist.delete({
     where : {id : req.params.watchlistId}
   });
+
+  await clearHashCache("/movies");
 
   res.status(200).json({
     status : "success",
@@ -71,12 +77,12 @@ export const updateWatchlistItem = catchAsync(async (req, res, next) => {
     where :{id : req.params.watchlistId}
   })
   if (!watchlistItem){
-    return next(AppError(404, "Watchlist Item not found"));
+    return next(new AppError("Watchlist Item not found", 404));
   }
   // check ownership
   if (watchlistItem.userId !== req.user.id)
   {
-    return next(AppError(403, "not allowed to update this whatchlist"));
+    return next(new AppError("not allowed to update this whatchlist", 403));
   }
   const updatedItem = await prisma.watchlist.update({
     where : {id : req.params.watchlistId},
@@ -86,7 +92,6 @@ export const updateWatchlistItem = catchAsync(async (req, res, next) => {
       notes,
     }
   });
-
   res.status(200).json({
     status : "success",
     data : {
