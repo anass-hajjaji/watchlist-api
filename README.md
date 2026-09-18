@@ -5,7 +5,7 @@ A production-ready REST API for managing movies and personal watchlists, built w
 ## Features
 
 - **Enterprise Caching**: Redis-backed cache middleware with automated cache invalidation (sweepers) for lightning-fast `GET` requests.
-- **Advanced Security**: Redis-backed rate limiting (Global limits and strict Auth limits), bcrypt password hashing, and duplicate entry prevention.
+- **Advanced Security**: Redis-backed global rate limiting, bcrypt password hashing, and duplicate entry prevention.
 - **Authentication**: Register, login, and logout with JWT stored in secure `httpOnly` + `SameSite=Strict` cookies.
 - **Global Error Handling**: Centralized error interception for asynchronous routes, Prisma exceptions (e.g., P2002), and JWT validations.
 - **Watchlist Management**: Add, update, and delete watchlist entries with full ownership-based access control.
@@ -43,7 +43,7 @@ watchlist-api/
 │   ├── middleware/
 │   │   ├── authMiddleware.js      # JWT auth guard
 │   │   ├── cacheMiddleware.js     # Redis cache interceptor
-│   │   ├── rateLimiter.js         # Redis-backed global & auth limiters
+│   │   ├── rateLimiter.js         # Redis-backed global limiter
 │   │   ├── validateRequest.js     # Zod validation middleware
 │   │   └── errorHandler.js        # Global error interceptor
 │   ├── routes/
@@ -74,7 +74,7 @@ watchlist-api/
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/anass-hajjaji/watchlist-api
+git clone [https://github.com/anass-hajjaji/watchlist-api](https://github.com/anass-hajjaji/watchlist-api)
 cd watchlist-api
 ```
 
@@ -113,7 +113,7 @@ API will be available at `http://localhost:3000`
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | POST | `/auth/register` | Create a new account | No |
-| POST | `/auth/login` | Login and receive JWT | No *(Strict Rate Limit: 5/hr)* |
+| POST | `/auth/login` | Login and receive JWT | No |
 | POST | `/auth/logout` | Clear JWT cookie | No |
 
 ### Movies
@@ -136,7 +136,7 @@ API will be available at `http://localhost:3000`
 
 ### Authentication Flow
 - **Register**: Checks for duplicate email → hashes password with bcrypt → creates user → returns JWT.
-- **Login**: Validates credentials → returns JWT in response body and an `httpOnly` cookie. Protected by a strict `loginLimiter` (5 attempts per hour).
+- **Login**: Validates credentials → returns JWT in response body and an `httpOnly` cookie.
 - **Logout**: Clears the JWT cookie.
 - **JWT**: Signed with `JWT_SECRET`, returned in both the response and a `Secure`, `HttpOnly`, `SameSite=Strict` cookie.
 
@@ -145,8 +145,8 @@ API will be available at `http://localhost:3000`
 - **Invalidation**: When a database mutation occurs (`POST`, `PUT`, `DELETE`), the `clearHashCache` utility acts as a sweeper. It finds and deletes all related Redis keys using wildcard patterns (e.g., `/movies*`) to ensure the next request pulls fresh data.
 
 ### Security & Rate Limiting
-- **Global Limiter**: Restricts general traffic to 100 requests per 15-minute window per IP.
-- **Redis Store**: Limiters are powered by `rate-limit-redis`, storing IP tallies directly in the Redis container for instantaneous, low-memory tracking.
+- **Global Limiter**: Restricts general API traffic to 100 requests per 15-minute window per IP.
+- **Redis Store**: The limiter is powered by `rate-limit-redis`, storing IP tallies directly in the Redis container for instantaneous, low-memory tracking.
 
 ### Global Error Handling
 - **catchAsync**: All controllers are wrapped in a `catchAsync` utility to eliminate repetitive `try/catch` blocks.
