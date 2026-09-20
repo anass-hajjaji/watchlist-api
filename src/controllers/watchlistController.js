@@ -5,7 +5,6 @@ import {clearHashCache} from '../utils/chache.js'
 
 export const addToWatchlist = catchAsync(async (req, res, next) => {
   const {movieId, status, rating, notes } = req.body;
-  // verify movie exists
   const movie = await prisma.movie.findUnique(
   {
     where:{ id : movieId},
@@ -35,9 +34,7 @@ export const addToWatchlist = catchAsync(async (req, res, next) => {
       notes,
     }
   });
-
   await clearHashCache("/movies");
-
   return res.status(201).json({
     status : "success",
     data : {

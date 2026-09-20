@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { connectDB, disconnectDb } from './config/db.js';
+import cookieParser from 'cookie-parser';
 // imported Routes
 import moviesRoutes from './routes/movieRoutes.js';
 import authRoutes from './routes/authRoutes.js';
@@ -16,6 +17,9 @@ const app = express();
 
 //for parsing application/json
 app.use(express.json());
+//for parsing cookies
+app.use(cookieParser());
+
 // for parsing application/x-www-form-urlencoded
 app.use(express.urlencoded({ extended: true }));
 
@@ -41,9 +45,12 @@ const start = async () => {
     await connectDB();
     await connectRedis();
     initRateLimiter(); // Initialize the rate limiter after Redis is connected
-    server = app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
+    // Start the server only if not in test environment
+    if (process.env.NODE_ENV !== 'test') {
+      server = app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+      });
+    }
   } catch (err) {
     console.error('Startup error:', err);
     process.exit(1);
@@ -83,3 +90,5 @@ process.on('SIGTERM', async () => {
     process.exit(0);
   });
 });
+
+export { app };
