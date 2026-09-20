@@ -58,6 +58,9 @@ watchlist-api/
 │   ├── validators/
 │   │   └── watchlistValidator.js  # Zod schemas
 │   └── server.js                  # App entrypoint & boot sequence
+├── tests/
+│   ├── auth.integration.test.js       # Authentication integration tests
+│   └── watchlist.integration.test.js  # Watchlist integration tests
 ├── docker-compose.yml             # Container orchestration
 ├── .env.example
 └── package.json
@@ -106,6 +109,24 @@ docker compose exec api node prisma/seed.js
 ```
 
 API will be available at `http://localhost:3000`
+
+### Running Integration Tests
+
+The integration tests run against the real PostgreSQL database and Redis instance. They use Vitest and Supertest to exercise the Express app, then query PostgreSQL with Prisma to verify that the requested data was persisted correctly.
+
+Run the full test suite inside the API container:
+
+```bash
+docker compose exec -e NODE_ENV=test api npm test
+```
+
+The test suite currently covers:
+
+- User registration, including password hashing and database persistence.
+- User login, including JWT generation and the `httpOnly` cookie.
+- Authenticated watchlist creation, including authentication and database persistence.
+
+Tests clean up users, movies, and watchlist entries between runs. Make sure the Docker services are running and that `.env` contains valid `DATABASE_URL` and `REDIS_URL` values before running them. To run Vitest in watch mode, use `docker compose exec -e NODE_ENV=test api npm run test:watch`.
 
 ## API Reference
 
