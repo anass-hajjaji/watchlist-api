@@ -43,6 +43,7 @@ describe('Watchlist API - Real Database Integration', () => {
     await prisma.$disconnect();
   });
 
+  
   // 2. THE TEST (Give it 15 seconds to complete)
   it('should allow an authenticated user to add a movie to their watchlist', async () => {
     const response = await request(app)
