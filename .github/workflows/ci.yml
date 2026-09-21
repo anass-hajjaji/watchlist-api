@@ -1,0 +1,61 @@
+name: Watchlist API CI
+
+# 1. THE TRIGGER: When should this run?
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    # 2. THE SERVER: GitHub gives us a fresh Ubuntu machine
+    runs-on: ubuntu-latest
+
+    # 3. THE INFRASTRUCTURE: Boot up temporary DB and Cache
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: watchlist_test
+        ports:
+          - 5432:5432
+        # Wait for the DB to be ready before moving on
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    # 4. THE ENVIRONMENT VARIABLES: Tell Node where to connect
+    env:
+      DATABASE_URL: postgresql://test_user:test_password@localhost:5432/watchlist_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: super_secret_test_key
+      NODE_ENV: test
+
+    # 5. THE STEPS (The Instructions)
+    steps:
+      - name: 📥 Checkout the code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🏗️ Push Prisma Schema to PostgreSQL
+        run: npx prisma db push
+
+      - name: 🧪 Run Integration Tests
+        run: npx vitest run
