@@ -60,6 +60,7 @@ watchlist-api/
 │   └── server.js                  # App entrypoint & boot sequence
 ├── tests/
 │   ├── auth.integration.test.js       # Authentication integration tests
+│   ├── movies.integration.test.js     # Movie CRUD integration tests
 │   └── watchlist.integration.test.js  # Watchlist integration tests
 ├── docker-compose.yml             # Container orchestration
 ├── .env.example
@@ -124,6 +125,7 @@ The test suite currently covers:
 
 - User registration, including password hashing and database persistence.
 - User login, including JWT generation and the `httpOnly` cookie.
+- Movie CRUD operations, including creation, retrieval, updates, and deletion with creator authorization.
 - Authenticated watchlist creation, including authentication and database persistence.
 
 Tests clean up users, movies, and watchlist entries between runs. Make sure the Docker services are running and that `.env` contains valid `DATABASE_URL` and `REDIS_URL` values before running them. To run Vitest in watch mode, use `docker compose exec -e NODE_ENV=test api npm run test:watch`.
