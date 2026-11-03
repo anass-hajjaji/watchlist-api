@@ -15,6 +15,7 @@ import { initRateLimiter } from './middleware/rateLimiter.js';
 
 const app = express();
 
+app.set('trust proxy', 1); // Trust first proxy for rate limiting
 //for parsing application/json
 app.use(express.json());
 //for parsing cookies
